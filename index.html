@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>u3ds — Documentação do servidor</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0B0F1A; color:#D1D5DB; font-family:'Segoe UI',Arial,sans-serif; line-height:1.6; }
+  header { background:linear-gradient(135deg,#0EA5E9,#059669); color:#fff; padding:34px 24px; text-align:center; }
+  header h1 { font-size:26px; letter-spacing:1px; }
+  header p { margin-top:8px; font-size:14px; opacity:.9; }
+  main { max-width:980px; margin:0 auto; padding:28px 20px 60px; }
+  h2 { color:#38BDF8; font-size:20px; margin:34px 0 12px; padding-bottom:6px; border-bottom:1px solid #1E293B; }
+  h3 { color:#94A3B8; font-size:15px; margin:20px 0 8px; }
+  p { margin:8px 0; }
+  code { background:#101A30; border:1px solid #1E293B; padding:1px 6px; border-radius:4px; font-family:Consolas,monospace; font-size:13px; color:#A8BFD9; }
+  pre { background:#101A30; border:1px solid #1E293B; border-radius:8px; padding:14px; overflow-x:auto; margin:10px 0; }
+  pre code { border:0; padding:0; background:none; }
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:14px; }
+  th { background:#17223A; color:#38BDF8; text-align:left; padding:8px 10px; border:1px solid #1E293B; }
+  td { padding:8px 10px; border:1px solid #1E293B; vertical-align:top; }
+  tr:nth-child(even) td { background:#0E1524; }
+  .warn { background:#451A03; border-left:4px solid #F59E0B; padding:10px 14px; border-radius:6px; margin:12px 0; font-size:14px; }
+  .danger { background:#450A0A; border-left:4px solid #EF4444; padding:10px 14px; border-radius:6px; margin:12px 0; font-size:14px; }
+  .ok { background:#052E16; border-left:4px solid #059669; padding:10px 14px; border-radius:6px; margin:12px 0; font-size:14px; }
+  ul, ol { margin:8px 0 8px 24px; }
+  li { margin:4px 0; }
+  a { color:#38BDF8; }
+  footer { text-align:center; color:#475569; font-size:12px; padding:20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>u3ds — Documentação do ambiente de servidor</h1>
+  <p>Unturned dedicado + Rocket + SimpleKits — conhecimento operacional e técnico consolidado</p>
+</header>
+<main>
+
+<h2>1. Estrutura do servidor</h2>
+<p>Servidor dedicado <b>separado</b> do cliente:</p>
+<table>
+  <tr><th>Caminho</th><th>Papel</th></tr>
+  <tr><td><code>C:\Program Files (x86)\Steam\steamapps\common\u3ds\</code></td><td>Instalação dedicada do servidor</td></tr>
+  <tr><td><code>C:\Program Files (x86)\Steam\steamapps\common\Unturned\</code></td><td>Cliente (compartilha só o conteúdo vanilla)</td></tr>
+  <tr><td><code>u3ds\Unturned.exe</code></td><td>Binário do servidor</td></tr>
+  <tr><td><code>u3ds\ServerHelper.bat</code></td><td>Launcher (ver seção 2)</td></tr>
+  <tr><td><code>u3ds\Bundles\core.masterbundle</code> (117 MB)</td><td>Conteúdo vanilla (items, modelos, texturas)</td></tr>
+  <tr><td><code>u3ds\Bundles\Items\...</code></td><td>Arquivos <code>.dat</code> de cada item (GUID, Type, ID, atributos)</td></tr>
+  <tr><td><code>u3ds\Servers\Teste\</code></td><td>Servidor "Teste" (config, mundo, workshop, logs)</td></tr>
+  <tr><td><code>u3ds\Modules\Rocket.Unturned\</code></td><td>Rocket (Rocket.API.dll, Rocket.Core.dll, Rocket.Unturned.dll)</td></tr>
+  <tr><td><code>u3ds\Rocket\Plugins\</code></td><td>Plugins Rocket COMPARTILHADOS</td></tr>
+  <tr><td><code>u3ds\Servers\Teste\Rocket\Plugins\</code></td><td>Plugins Rocket DO SERVIDOR (é o que o Teste carrega)</td></tr>
+  <tr><td><code>u3ds\Servers\Teste\Workshop\Content\</code></td><td>Conteúdo workshop do servidor</td></tr>
+  <tr><td><code>u3ds\Logs\Server_Teste.log</code></td><td>Log do servidor (UTC)</td></tr>
+</table>
+
+<h2>2. Iniciar / parar o servidor</h2>
+<h3>Iniciar (sempre com o argumento do servidor!)</h3>
+<pre><code>ServerHelper.bat +LanServer/Teste</code></pre>
+<p>O <code>ServerHelper.bat</code> é só um intermediário:</p>
+<pre><code>start "" "%~dp0Unturned.exe" -batchmode -nographics %*</code></pre>
+<div class="warn"><b>IMPORTANTE</b>: sem <code>+LanServer/Teste</code> o servidor boota a configuração "Default" (sem plugins/workshop) e parece travado. Boot completo leva <b>3–4 minutos</b> (carrega ~6115 assets; o Rocket só escreve no log depois do level carregar).</div>
+<p>Equivalente em PowerShell (sem o bat):</p>
+<pre><code>Start-Process -FilePath 'C:\Program Files (x86)\Steam\steamapps\common\u3ds\ServerHelper.bat' -ArgumentList '+LanServer/Teste' -WorkingDirectory 'C:\Program Files (x86)\Steam\steamapps\common\u3ds'</code></pre>
+
+<h3>Parar (kill limpo)</h3>
+<pre><code>Get-WmiObject Win32_Process -Filter "Name='Unturned.exe'" |
+  Where-Object { $_.CommandLine -match 'batchmode' -and $_.ExecutablePath -like '*u3ds*' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }</code></pre>
+<div class="danger"><b>Nunca matar o cliente</b> (<code>common\Unturned</code> sem <code>batchmode</code> na linha de comando).</div>
+
+<h3>Verificar que subiu</h3>
+<pre><code>Servers\Teste\Rocket\Logs\Rocket.log
+[Info] SimpleKits &gt;&gt; SimpleKits loaded! Kits: 3</code></pre>
+<p><code>Server_Teste.log</code> mostra o progresso de assets ("Read X of 6115...", "Loading level: 100%").</p>
+
+<h2>3. Logs — fusos horários</h2>
+<table>
+  <tr><th>Log</th><th>Fuso</th></tr>
+  <tr><td><code>Servers\Teste\Rocket\Logs\Rocket.log</code></td><td><b>LOCAL</b> (rotação por boot: <code>Rocket.&lt;unix&gt;.log</code>)</td></tr>
+  <tr><td><code>u3ds\Logs\Server_Teste.log</code></td><td>UTC</td></tr>
+  <tr><td><code>common\Unturned\Logs\Client.log</code></td><td>UTC</td></tr>
+</table>
+
+<h2>4. Rocket + SimpleKits</h2>
+<ul>
+  <li>O servidor Teste carrega o plugin de <code>Servers\Teste\Rocket\Plugins\SimpleKits.dll</code> (o Rocket.log mostra o caminho em "Rocket dependency registered").</li>
+  <li>Config: <code>Servers\Teste\Rocket\Plugins\SimpleKits\SimpleKits.configuration.xml</code> (gera na 1ª carga).</li>
+  <li>Traduções: <code>SimpleKits.en.translation.xml</code> (override do <code>DefaultTranslations</code> do código; adicionar chaves novas nos DOIS lugares).</li>
+  <li>Estado por jogador: <code>SimpleKits\PlayerSettings.json</code> (auto-equip, pegar sem espaço); cooldowns em <code>SimpleKits\Cooldowns.json</code>.</li>
+</ul>
+<div class="danger"><b>Regra de ouro do deploy</b>: a DLL carregada fica com arquivo mapeado — matar o servidor ANTES de copiar a DLL nova.</div>
+
+<h2>5. Bundle da UI (efeito 47501) — 4 destinos de deploy</h2>
+<table>
+  <tr><th>#</th><th>Caminho</th><th>Quem usa</th></tr>
+  <tr><td>1</td><td><code>u3ds\Servers\Teste\Workshop\Content\3782829202\Effects\KitsUI\</code></td><td>SERVIDOR (dedicado)</td></tr>
+  <tr><td>2</td><td><code>common\Unturned\Bundles\Workshop\Content\Effects\KitsUI\</code></td><td>CLIENTE (pasta de conteúdo, sem pasta de ID)</td></tr>
+  <tr><td>3</td><td><code>common\Unturned\workshop\content\304930\3782829202\Effects\KitsUI\</code></td><td>Cliente via workshop assinado</td></tr>
+  <tr><td>4</td><td><code>opencode\KitsUI-Workshop\Content\Effects\KitsUI\</code></td><td>Repo local para upload SteamCMD</td></tr>
+</table>
+<p>Cada pasta contém <code>KitsUI.unity3d</code> + <code>KitsUI.dat</code> (GUID 49b531cd73b94bde82c54ff0d22d0ebc, Type Effect, ID 47501).</p>
+<ul>
+  <li><code>Servers\Teste\WorkshopDownloadConfig.json</code> com <code>File_IDs</code> vazio → o servidor usa o conteúdo local (não baixa do Steam).</li>
+  <li><b>Cliente precisa reabrir o jogo para carregar bundle novo</b> (sem isso vê a UI antiga).</li>
+</ul>
+
+<h2>6. Builds</h2>
+<h3>Plugin (Rocket, .NET Framework 4.8)</h3>
+<pre><code>dotnet build "C:\Users\ffxtr\OneDrive\Documentos\opencode\SimpleKits\SimpleKits.csproj" -c Release --nologo -v q</code></pre>
+<ul>
+  <li>MSBuild não existe no PATH; usar <code>dotnet</code> (<code>C:\Program Files\dotnet\dotnet.exe</code>).</li>
+  <li>O csproj referencia DLLs do u3ds (Assembly-CSharp, Rocket.*, UnityEngine.*, Newtonsoft.Json, SDG.NetTransport).</li>
+  <li>Saída: <code>SimpleKits\bin\Release\SimpleKits.dll</code>.</li>
+</ul>
+
+<h3>UI (Unity 2022.3.62f3)</h3>
+<pre><code>"C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\ffxtr\OneDrive\Documentos\opencode\KitsUI-Unity" -executeMethod KitUiBuilder.BuildAndStage -logFile "%TEMP%\opencode\unity-build.log"</code></pre>
+<ul>
+  <li>Saída: <code>KitsUI-Unity\Build\Staging\Effects\KitsUI\KitsUI.unity3d</code> (+ KitsUI.dat gerado).</li>
+  <li>Erros de licença no log ("No ULF license found") são NORMAIS no batchmode.</li>
+  <li>No editor: menu <code>KitsUI &gt; Build Effect Asset (server + workshop)</code>.</li>
+</ul>
+
+<h3>Módulo do cliente (ícones/ESC/crosshair/clique direito)</h3>
+<pre><code>dotnet build "C:\Users\ffxtr\OneDrive\Documentos\opencode\UnturnedItemIcons\src\UnturnedItemIcons\UnturnedItemIcons.csproj" -c Release --nologo -v q</code></pre>
+<ul>
+  <li>Instalar em <code>common\Unturned\Modules\UnturnedItemIcons\UnturnedItemIcons.dll</code> (<b>cliente fechado</b>).</li>
+  <li>Avisos CS0618 (Dedicator.isDedicated obsoleto etc.) são normais.</li>
+</ul>
+
+<h2>7. Publicação na Steam Workshop</h2>
+<ul>
+  <li>Item: <b>Simple Kits UI</b> — <code>publishedfileid 3782829202</code>, appid 304930.</li>
+  <li>Vdf: <code>opencode\KitsUI-Workshop\kitsui.vdf</code> (workshopitem: contentfolder/previewfile/visibility/title/description/changenote/tags).</li>
+  <li>SteamCMD: <code>opencode\steamcmd\steamcmd.exe</code> (já baixado/atualizado).</li>
+  <li>Upload: <code>steamcmd +login &lt;usuario&gt; &lt;senha&gt; +workshop_build_item "…\kitsui.vdf" +quit</code></li>
+  <li>Conta: <b>smurfank</b> (o login da Steam é diferente do nome de exibição/GitHub); Steam Guard <b>mobile</b> exige confirmação no celular a cada login novo (~2 min de janela).</li>
+  <li>O conteúdo enviado é a pasta <code>KitsUI-Workshop\Content</code> (estrutura <code>Effects/KitsUI/...</code>).</li>
+</ul>
+<div class="warn"><b>Limitação conhecida</b>: steamcmd NÃO muda a visibilidade de item existente de forma confiável; a página pública do item ficou em erro (API <code>GetPublishedFileDetails</code> → result 9 = não encontrado/privado). Para publicar: mudar a visibilidade logado em <code>https://steamcommunity.com/sharedfiles/edit/?id=3782829202</code> ou recriar o item. (Senha da conta Steam não fica neste documento.)</div>
+
+<h2>8. Runbook — deploy completo de uma versão</h2>
+<ol>
+  <li>Build do bundle (Unity batchmode) → copiar para os 4 destinos (seção 5).</li>
+  <li>Build do plugin (<code>dotnet build</code>) → kill do servidor → copiar DLL para <code>u3ds\Rocket\Plugins\SimpleKits.dll</code> e <code>u3ds\Servers\Teste\Rocket\Plugins\SimpleKits.dll</code>; se mudou traduções, copiar o <code>SimpleKits.en.translation.xml</code>.</li>
+  <li>Build do módulo → copiar para <code>common\Unturned\Modules\UnturnedItemIcons\</code> (cliente fechado).</li>
+  <li><code>Start-Process ServerHelper.bat +LanServer/Teste</code>.</li>
+  <li>Aguardar 3–4 min → conferir "SimpleKits loaded!" no Rocket.log.</li>
+  <li>Reenviar o bundle para a Workshop (SteamCMD + confirmação no celular) se mudou a UI.</li>
+</ol>
+
+<h2>9. Troubleshooting</h2>
+<table>
+  <tr><th>Sintoma</th><th>Causa provável / solução</th></tr>
+  <tr><td>Servidor "trava" no boot</td><td>Faltou <code>+LanServer/Teste</code> no ServerHelper.bat</td></tr>
+  <tr><td>DLL não copia ("user-mapped section")</td><td>Servidor rodando — matar antes</td></tr>
+  <tr><td>Cliente vê UI antiga</td><td>Cliente não reaberto (bundle em cache da sessão)</td></tr>
+  <tr><td>Ícones quebrados/retângulo cinza</td><td>Repo de ícones desatualizado; config <code>ItemIconUrlTemplate</code> → Akulation/vanilla-icons</td></tr>
+  <tr><td>ESC não fecha a UI</td><td>Módulo não instalado ou cliente não reiniciado; conferir Client.log por "[UnturnedItemIcons] ESC detectado"</td></tr>
+  <tr><td>Crosshair aparece na UI</td><td>Módulo antigo (fix: SetDirectionalArrowsVisible(false) no KitUIHook)</td></tr>
+  <tr><td>Tradução nova não aparece</td><td>Faltou adicionar a chave no XML do servidor (ou só no código)</td></tr>
+  <tr><td>Tradução não muda</td><td>XML do servidor sobrescreve DefaultTranslations</td></tr>
+  <tr><td>Arma resgatada sem acessórios</td><td>Item entrou pelo campo de texto — state só é salvo via baú virtual</td></tr>
+</table>
+
+<h2>10. Conhecimento técnico do jogo (pesquisas que deram certo)</h2>
+
+<h3>Decompiles (referência)</h3>
+<ul>
+  <li>Ferramenta: <code>C:\Users\ffxtr\.dotnet\tools\ilspycmd.exe</code></li>
+  <li>Saídas em <code>%TEMP%\opencode\</code>: PlayerUI.cs, Player.cs, PlayerLifeUI.cs, EffectManager.cs, ItemTool.cs, Item.cs, ItemAsset.cs, ItemGunAsset.cs, ItemMagazineAsset.cs, PlayerInventory.cs, Items.cs, InputEx.cs, Crosshair.cs, GraphicsSettings.cs, IconUtils.cs, GlazieruGUITooltip.cs, types.txt, etc.</li>
+</ul>
+
+<h3>Widget flags (<code>EPluginWidgetFlags</code>)</h3>
+<pre><code>None=0, Modal=1, NoBlur=2, ForceBlur=4, ShowInteractWithEnemy=8, ShowDeathMenu=0x10,
+ShowHealth=0x20, ShowFood=0x40, ShowWater=0x80, ShowVirus=0x100, ShowStamina=0x200,
+ShowOxygen=0x400, ShowStatusIcons=0x800, ShowUseableGunStatus=0x1000, ShowVehicleStatus=0x2000,
+ShowCenterDot=0x4000, ShowReputationChangeNotification=0x8000, ShowLifeMeters=0x7E0, Default=0xFFF8</code></pre>
+<ul>
+  <li><code>Player.setPluginWidgetFlag</code> / <code>enablePluginWidgetFlag</code> / <code>disablePluginWidgetFlag</code> — aplicam no cliente em tempo real.</li>
+  <li><code>ShowLifeMeters</code> = vida/comida/água/vírus/resistência/oxigênio (client reage via <code>OnLocalPluginWidgetFlagsChanged</code>).</li>
+  <li><code>Modal</code> = cursor visível; <code>Player.inPluginModal</code> = <code>isPluginWidgetFlagActive(Modal)</code>.</li>
+</ul>
+
+<h3>Cliques de botão na UI de efeito</h3>
+<ul>
+  <li>O jogo anexa <code>PluginButtonListener</code> a TODO <code>Button</code> do efeito → envia o <b>nome do botão</b> ao servidor (<code>EffectManager.onEffectButtonClicked</code>).</li>
+  <li>Clique <b>direito NÃO</b> dispara o <code>onClick</code> do uGUI → para capturá-lo o módulo anexa <code>IPointerClickHandler</code> em runtime.</li>
+  <li><code>EffectManager.sendEffectClicked("nome")</code> — público; usado pelo módulo para ESC e clique direito.</li>
+</ul>
+
+<h3>ESC</h3>
+<ul>
+  <li>O servidor nunca recebe ESC. O jogo consome ESC via <code>InputEx.ConsumeKeyDown</code> (gate <code>keyGuard</code> por frame).</li>
+  <li>Solução: módulo no cliente detecta ESC (Input.GetKeyDown + fallback <code>OnGUI</code>/<code>Event.current</code> com dedupe por frame) → <code>sendEffectClicked("BExit")</code> → plugin fecha na ordem: baú real → configurações → preview → baú virtual → editor → UI.</li>
+</ul>
+
+<h3>Crosshair</h3>
+<ul>
+  <li><code>PlayerLifeUI.crosshair</code> (Crosshair : SleekWrapper, assembly SDG.Glazier.Runtime):
+    <ul>
+      <li>Ponto central = <code>gameWantsCenterDotVisible &amp;&amp; pluginAllowsCenterDotVisible</code> (flag <code>ShowCenterDot</code>).</li>
+      <li>Cruz da arma = <code>SetDirectionalArrowsVisible(bool)</code> (4 setas).</li>
+      <li><code>IsVisible</code> NÃO existe no tipo — usar os setters públicos acima.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>State de armas (18 bytes)</h3>
+<pre><code>[mira ushort][tático ushort][grip ushort][cano ushort][pente ushort][munição byte][firemode byte][qualidades 6x]</code></pre>
+<p>Offsets 0, 2, 4, 6, 8 = acessórios; byte 10 = munição; <code>ItemGunAsset.ammoMax/ammoMin</code> públicos; <code>Attachments.parseFromItemState</code>.</p>
+
+<h3>Munição/pentes</h3>
+<ul>
+  <li><code>EItemType.MAGAZINE</code>: a munição é o <b>amount</b> da pilha (state vazio); pentes/flechas entram como pilha (Type Magazine no .dat).</li>
+  <li><code>player.inventory.tryAddItem(item, auto)</code> — <b>auto=true equipa arma na mão</b> (causa do bug de autoequip).</li>
+  <li><code>forceAddItem</code>/<code>forceAddItemAuto</code> dropa no chão se não couber (<code>ItemManager.dropItem</code>).</li>
+  <li>Inventário: páginas <code>PlayerInventory.SLOTS (2)..PAGES-2 (7)</code>; <code>Items.tryAddItem</code> limita 200 por página e usa <code>tryFindSpace(size_x, size_y)</code>.</li>
+</ul>
+
+<h3>Ícones de itens</h3>
+<ul>
+  <li><code>ItemTool.getIcon(id, skin, quality, state, asset, skinAsset, tags, dynamicProps, w, h, scale, readableOnCPU, cb)</code> — renderiza o modelo 1 frame após instanciar ("Icon" transform); fila de ícones; cache por asset.</li>
+  <li>Pipeline oficial do jogo: <code>IconUtils.captureAllItemIcons</code> (Shift+F1 no menu Workshop → <code>Extras/Icons/{nome}_{id}.png</code>, resolução 512×size).</li>
+  <li>Ícones <b>flat/silhueta</b> são normais para acessórios/bandage (comparação com Akulation/vanilla-icons confirma).</li>
+  <li>Fontes: <code>Akulation/vanilla-icons</code> (<code>@main/icons/{id}.png</code>) — oficial e completo.</li>
+</ul>
+
+<h3>Workshop (Steam)</h3>
+<ul>
+  <li><code>GetPublishedFileDetails</code> (POST, sem auth) → <code>result 9</code> = arquivo não encontrado/privado para o anônimo.</li>
+  <li>SteamCMD <code>workshop_build_item</code> com vdf <code>"workshopitem"</code> — fields: appid, publishedfileid, contentfolder, previewfile, visibility (0 privado, 2 público), title, description, changenote, tags.</li>
+  <li>Para item existente, mudança de visibilidade pode exigir a página de edição do Steam (não o steamcmd).</li>
+</ul>
+
+<h3>Diversos</h3>
+<ul>
+  <li>Fonte da UI: <code>LegacyRuntime.ttf</code> (não tem glifo "⚙" garantido → sprite de engrenagem gerado proceduralmente no builder).</li>
+  <li>Elementos críticos do efeito: botões viram cliques pelo NOME; textos vivem em filhos "Label" RENOMEADOS (padrão <code>XxxLabel</code>); <code>SetActive(false)</code> no prefab persiste no bundle (painéis ocultos por padrão).</li>
+  <li><code>GlazieruGUITooltip</code> existe (hover), mas é <code>internal</code> → inacessível para o bundle; tooltips do plugin são por clique (servidor).</li>
+  <li>Teste do servidor: SteamID admin <code>76561198930801026</code>; sem BattlEye para módulos de cliente.</li>
+</ul>
+
+</main>
+<footer>u3ds — Documentação · Repositório privado · Gerado em 2026</footer>
+</body>
+</html>
